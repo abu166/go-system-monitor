@@ -1,0 +1,177 @@
+{
+  "info": {
+    "_postman_id": "1f2b8af4-2274-4f6f-a3d2-6d8f42de5a11",
+    "name": "System Monitor API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Smoke API checks for System Monitor backend"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('success=true', function () { pm.expect(json.success).to.eql(true); });",
+              "pm.test('health status ok', function () { pm.expect(json.data.status).to.eql('ok'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Latest Metrics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/metrics/latest",
+          "host": ["{{base_url}}"],
+          "path": ["api", "metrics", "latest"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('success=true', function () { pm.expect(json.success).to.eql(true); });",
+              "pm.test('has cpu field', function () { pm.expect(json.data).to.have.property('cpu_usage_percent'); });",
+              "pm.test('has memory field', function () { pm.expect(json.data).to.have.property('memory_usage_percent'); });",
+              "pm.test('has disk field', function () { pm.expect(json.data).to.have.property('disk_usage_percent'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Metrics History",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/metrics/history",
+          "host": ["{{base_url}}"],
+          "path": ["api", "metrics", "history"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('success=true', function () { pm.expect(json.success).to.eql(true); });",
+              "pm.test('history array', function () { pm.expect(Array.isArray(json.data)).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "System Info",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/system/info",
+          "host": ["{{base_url}}"],
+          "path": ["api", "system", "info"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('success=true', function () { pm.expect(json.success).to.eql(true); });",
+              "pm.test('has hostname', function () { pm.expect(json.data).to.have.property('hostname'); });",
+              "pm.test('has cpu_cores', function () { pm.expect(json.data).to.have.property('cpu_cores'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Current Alerts",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/alerts/current",
+          "host": ["{{base_url}}"],
+          "path": ["api", "alerts", "current"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('success=true', function () { pm.expect(json.success).to.eql(true); });",
+              "pm.test('has triggered', function () { pm.expect(json.data).to.have.property('triggered'); });",
+              "pm.test('alerts is array', function () { pm.expect(Array.isArray(json.data.alerts)).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Prometheus Metrics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics",
+          "host": ["{{base_url}}"],
+          "path": ["metrics"]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "pm.test('contains custom cpu metric', function () {",
+              "  pm.expect(pm.response.text()).to.include('system_monitor_cpu_usage_percent');",
+              "});"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ]
+}
