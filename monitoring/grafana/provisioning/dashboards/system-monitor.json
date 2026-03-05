@@ -1,0 +1,54 @@
+{
+  "id": null,
+  "uid": "system-monitor-overview",
+  "title": "System Monitor Overview",
+  "tags": ["system-monitor"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "5s",
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "CPU Usage %",
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+      "targets": [
+        {"expr": "system_monitor_cpu_usage_percent", "legendFormat": "CPU", "refId": "A"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory Usage %",
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+      "targets": [
+        {"expr": "system_monitor_memory_usage_percent", "legendFormat": "Memory", "refId": "A"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Disk Usage %",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+      "targets": [
+        {"expr": "system_monitor_disk_usage_percent", "legendFormat": "Disk", "refId": "A"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Collection Errors (rate)",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {"expr": "rate(system_monitor_collection_errors_total[5m])", "legendFormat": "{{operation}}", "refId": "A"}
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP Requests (rate)",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [
+        {"expr": "rate(system_monitor_http_requests_total[5m])", "legendFormat": "{{method}} {{path}} {{status}}", "refId": "A"}
+      ]
+    }
+  ],
+  "templating": {"list": []},
+  "annotations": {"list": []}
+}
