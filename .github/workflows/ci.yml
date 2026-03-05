@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - run: go mod tidy
+      - run: go test ./...
+
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package.json
+      - run: npm install
+      - run: npm run build
+
+  integration-and-load:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and run stack
+        run: docker compose up -d --build backend frontend
+      - name: Wait for backend health
+        run: |
+          for i in {1..30}; do
+            if curl -fsS http://localhost:8080/health > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Backend health check failed"
+          exit 1
+      - name: Run e2e smoke
+        run: ./tests/e2e/smoke.sh
+      - name: Run k6 load smoke
+        run: |
+          docker run --rm \
+            --network go-system-monitor_default \
+            -e BASE_URL=http://backend:8080 \
+            -v ${{ github.workspace }}/tests/load:/scripts \
+            grafana/k6:0.56.0 run /scripts/k6-smoke.js
+      - name: Teardown
+        if: always()
+        run: docker compose down -v
