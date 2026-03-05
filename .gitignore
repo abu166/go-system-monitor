@@ -1,0 +1,13 @@
+# OS
+.DS_Store
+
+# Backend
+backend/bin/
+backend/.cache/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+
+# Env
+.env
