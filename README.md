@@ -29,18 +29,64 @@ A system monitoring app with:
 cp .env.example .env
 ```
 
-2. Build and run:
+2. Fast default startup (app only: backend + frontend):
 
 ```bash
 docker compose up -d --build
 ```
 
-3. Open:
+3. Full stack (app + Prometheus + Grafana):
+
+```bash
+docker compose --profile monitoring up -d --build
+```
+
+4. Open:
 - Frontend dashboard: `http://localhost:3000`
 - Backend health: `http://localhost:8080/health`
 - Backend Prometheus metrics: `http://localhost:8080/metrics`
-- Prometheus UI: `http://localhost:9090`
-- Grafana UI: `http://localhost:3001` (`admin` / `admin` by default)
+- Prometheus UI: `http://localhost:9090` (when `monitoring` profile is enabled)
+- Grafana UI: `http://localhost:3001` (when `monitoring` profile is enabled)
+
+## Docker Performance Tips
+
+- Enable BuildKit/Bake for faster builds:
+
+```bash
+export COMPOSE_BAKE=true
+```
+
+- Rebuild only one changed service:
+
+```bash
+docker compose up -d --build backend
+```
+
+- Use app-only mode for daily development (`monitoring` profile disabled).
+- Build caches are enabled in Dockerfiles for Go modules, Go build cache, and npm cache.
+- `.dockerignore` files reduce build context transfer for backend/frontend.
+
+## Stop / Shutdown
+
+- Stop app-only stack (backend + frontend):
+
+```bash
+docker compose down
+```
+
+- Stop full stack including monitoring profile and remove volumes:
+
+```bash
+docker compose --profile monitoring down -v --remove-orphans
+```
+
+- If Docker says network is still in use, check attached containers:
+
+```bash
+docker ps --filter network=go-system-monitor_default
+```
+
+Then stop/remove those containers and run `down` again.
 
 ## Run Without Docker
 

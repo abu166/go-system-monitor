@@ -1,9 +1,10 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.7
 FROM node:22-alpine AS builder
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+RUN --mount=type=cache,target=/root/.npm \
+    if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 COPY . .
 RUN npm run build
