@@ -18,6 +18,18 @@ jobs:
           go-version: '1.22'
       - run: go mod tidy
       - run: go test ./...
+      - name: Validate Prometheus alert rules
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/monitoring/prometheus:/rules \
+            prom/prometheus:v2.55.1 \
+            promtool test rules /rules/alerts.test.yml
+      - name: Validate Alertmanager config
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}/monitoring/alertmanager:/cfg \
+            prom/alertmanager:v0.27.0 \
+            amtool check-config /cfg/alertmanager.yml
 
   frontend-build:
     runs-on: ubuntu-latest
@@ -33,6 +45,50 @@ jobs:
           cache-dependency-path: frontend/package.json
       - run: npm install
       - run: npm run build
+      - run: npm test
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package.json
+      - name: Go vulnerability scan
+        working-directory: backend
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          govulncheck ./...
+      - name: Frontend dependency audit
+        working-directory: frontend
+        run: |
+          npm install
+          npm audit --audit-level=high
+      - name: Build images for image scanning
+        run: docker compose build backend frontend
+      - name: Trivy scan backend image
+        run: |
+          BACKEND_IMAGE_ID=$(docker compose images -q backend)
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.57.1 image \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            "$BACKEND_IMAGE_ID"
+      - name: Trivy scan frontend image
+        run: |
+          FRONTEND_IMAGE_ID=$(docker compose images -q frontend)
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:0.57.1 image \
+            --severity HIGH,CRITICAL \
+            --exit-code 1 \
+            "$FRONTEND_IMAGE_ID"
 
   integration-and-load:
     runs-on: ubuntu-latest
