@@ -1,0 +1,74 @@
+groups:
+  - name: system-monitor-alerts
+    rules:
+      - alert: SystemMonitorBackendDown
+        expr: up{job="system-monitor-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "System Monitor backend is down"
+          description: "Prometheus cannot scrape backend:8080 for at least 1 minute."
+
+      - alert: SystemMonitorHighCPUUsage
+        expr: system_monitor_cpu_usage_percent > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 85% for at least 2 minutes."
+
+      - alert: SystemMonitorHighMemoryUsage
+        expr: system_monitor_memory_usage_percent > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is above 85% for at least 2 minutes."
+
+      - alert: SystemMonitorHighDiskUsage
+        expr: system_monitor_disk_usage_percent > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High disk usage"
+          description: "Disk usage is above 90% for at least 5 minutes."
+
+      - alert: SystemMonitorCollectionErrorRate
+        expr: sum(rate(system_monitor_collection_errors_total[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Metric collection errors detected"
+          description: "Collector errors are happening continuously in the last 5 minutes."
+
+      - alert: SystemMonitorHighHTTP5xxRatio
+        expr: (sum(rate(system_monitor_http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(system_monitor_http_requests_total[5m])), 0.001)) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High HTTP 5xx ratio"
+          description: "More than 5% of HTTP requests are 5xx in the last 5 minutes."
+
+      - alert: SystemMonitorHighP95Latency
+        expr: histogram_quantile(0.95, sum by (le) (rate(system_monitor_http_request_duration_seconds_bucket[5m]))) > 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 latency"
+          description: "p95 latency is above 1 second for at least 10 minutes."
+
+      - alert: SystemMonitorLowAvailability
+        expr: (1 - (sum(rate(system_monitor_http_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(system_monitor_http_requests_total[5m])), 0.001))) < 0.999
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Low API availability"
+          description: "Availability is below 99.9% for at least 10 minutes."
