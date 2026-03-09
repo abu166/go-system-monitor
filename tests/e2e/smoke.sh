@@ -15,6 +15,8 @@ check() {
 }
 
 check "/health" '"success":true'
+check "/live" '"status":"live"'
+check "/ready" '"status":"ready"'
 check "/api/metrics/latest" '"cpu_usage_percent"'
 check "/api/system/info" '"hostname"'
 check "/api/alerts/current" '"triggered"'

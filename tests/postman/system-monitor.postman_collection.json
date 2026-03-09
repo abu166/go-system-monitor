@@ -13,8 +13,12 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/health",
-          "host": ["{{base_url}}"],
-          "path": ["health"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
         }
       },
       "event": [
@@ -39,8 +43,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/api/metrics/latest",
-          "host": ["{{base_url}}"],
-          "path": ["api", "metrics", "latest"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "metrics",
+            "latest"
+          ]
         }
       },
       "event": [
@@ -67,8 +77,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/api/metrics/history",
-          "host": ["{{base_url}}"],
-          "path": ["api", "metrics", "history"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "metrics",
+            "history"
+          ]
         }
       },
       "event": [
@@ -93,8 +109,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/api/system/info",
-          "host": ["{{base_url}}"],
-          "path": ["api", "system", "info"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "system",
+            "info"
+          ]
         }
       },
       "event": [
@@ -120,8 +142,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/api/alerts/current",
-          "host": ["{{base_url}}"],
-          "path": ["api", "alerts", "current"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "alerts",
+            "current"
+          ]
         }
       },
       "event": [
@@ -147,8 +175,12 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/metrics",
-          "host": ["{{base_url}}"],
-          "path": ["metrics"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics"
+          ]
         }
       },
       "event": [
@@ -161,6 +193,98 @@
               "pm.test('contains custom cpu metric', function () {",
               "  pm.expect(pm.response.text()).to.include('system_monitor_cpu_usage_percent');",
               "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Liveness",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/live",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "live"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('success=true', function () { pm.expect(json.success).to.eql(true); });",
+              "pm.test('live status', function () { pm.expect(json.data.status).to.eql('live'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Readiness",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/ready",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "ready"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('success=true', function () { pm.expect(json.success).to.eql(true); });",
+              "pm.test('ready status', function () { pm.expect(json.data.status).to.eql('ready'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Metrics Stream Contract",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/metrics/stream",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "metrics",
+            "stream"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+              "const ct = pm.response.headers.get('Content-Type') || '';",
+              "pm.test('content-type is sse', function () { pm.expect(ct).to.include('text/event-stream'); });",
+              "pm.test('contains metrics event marker', function () { pm.expect(pm.response.text()).to.include('event: metrics'); });"
             ]
           }
         }

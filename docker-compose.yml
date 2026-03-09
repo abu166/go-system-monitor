@@ -9,12 +9,21 @@ services:
     environment:
       BACKEND_PORT: ${BACKEND_PORT:-8080}
       BACKEND_HISTORY_LIMIT: ${BACKEND_HISTORY_LIMIT:-100}
+      BACKEND_HISTORY_MAX_AGE: ${BACKEND_HISTORY_MAX_AGE:-24h}
+      BACKEND_HISTORY_MAX_FILE_SIZE_BYTES: ${BACKEND_HISTORY_MAX_FILE_SIZE_BYTES:-10485760}
+      BACKEND_HISTORY_IN_MEMORY_ONLY: ${BACKEND_HISTORY_IN_MEMORY_ONLY:-false}
+      BACKEND_HISTORY_FALLBACK_TO_MEMORY: ${BACKEND_HISTORY_FALLBACK_TO_MEMORY:-true}
       BACKEND_READ_TIMEOUT: ${BACKEND_READ_TIMEOUT:-5s}
+      BACKEND_READ_HEADER_TIMEOUT: ${BACKEND_READ_HEADER_TIMEOUT:-2s}
       BACKEND_WRITE_TIMEOUT: ${BACKEND_WRITE_TIMEOUT:-5s}
+      BACKEND_IDLE_TIMEOUT: ${BACKEND_IDLE_TIMEOUT:-30s}
+      BACKEND_MAX_HEADER_BYTES: ${BACKEND_MAX_HEADER_BYTES:-1048576}
       BACKEND_SHUTDOWN_TIMEOUT: ${BACKEND_SHUTDOWN_TIMEOUT:-10s}
       BACKEND_DISK_PATH: ${BACKEND_DISK_PATH:-/}
       BACKEND_STREAM_INTERVAL: ${BACKEND_STREAM_INTERVAL:-3s}
       BACKEND_HISTORY_FILE: ${BACKEND_HISTORY_FILE:-/app/data/metrics-history.jsonl}
+      BACKEND_CORS_ALLOWED_ORIGINS: ${BACKEND_CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost}
+      BACKEND_LOG_SAMPLE_RATE: ${BACKEND_LOG_SAMPLE_RATE:-5}
       BACKEND_CPU_ALERT_THRESHOLD: ${BACKEND_CPU_ALERT_THRESHOLD:-85}
       BACKEND_MEMORY_ALERT_THRESHOLD: ${BACKEND_MEMORY_ALERT_THRESHOLD:-85}
       BACKEND_DISK_ALERT_THRESHOLD: ${BACKEND_DISK_ALERT_THRESHOLD:-90}
@@ -59,11 +68,26 @@ services:
     profiles: ["monitoring"]
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
     depends_on:
       backend:
         condition: service_healthy
+      alertmanager:
+        condition: service_started
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: system-monitor-alertmanager
+    restart: unless-stopped
+    profiles: ["monitoring"]
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "${ALERTMANAGER_PORT:-9093}:9093"
 
   grafana:
     image: grafana/grafana:11.2.2
