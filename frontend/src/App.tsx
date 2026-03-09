@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import MetricCard from './components/MetricCard';
 import StatusBanner from './components/StatusBanner';
-import { fetchCurrentAlerts, fetchLatestMetrics, fetchSystemInfo, openMetricsStream } from './services/api';
+import { fetchCurrentAlerts, fetchLatestMetrics, fetchSystemInfo, subscribeMetricsStream, type StreamStatus } from './services/api';
 import { AlertStatus, MetricSnapshot, SystemInfo } from './types/metrics';
 
 const FALLBACK_POLL_MS = Number(import.meta.env.VITE_POLL_INTERVAL_MS ?? 5000);
@@ -28,9 +28,11 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<string>('Never');
-  const [live, setLive] = useState(false);
+  const [streamStatus, setStreamStatus] = useState<StreamStatus>('connecting');
+  const [partialData, setPartialData] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
-  const streamRef = useRef<EventSource | null>(null);
+  const streamRef = useRef<{ close: () => void } | null>(null);
+  const streamStatusRef = useRef<StreamStatus>('connecting');
 
   const loadFallbackData = useCallback(async () => {
     abortRef.current?.abort();
@@ -39,16 +41,39 @@ export default function App() {
 
     try {
       setError(null);
-      const [metricsData, infoData, alertData] = await Promise.all([
+      const [metricsResult, infoResult, alertsResult] = await Promise.allSettled([
         fetchLatestMetrics(controller.signal),
         fetchSystemInfo(controller.signal),
         fetchCurrentAlerts(controller.signal)
       ]);
 
-      setMetrics(metricsData);
-      setSystemInfo(infoData);
-      setAlerts(alertData);
-      setLastUpdated(new Date(metricsData.collected_at).toLocaleString());
+      let loadedAny = false;
+      let partial = false;
+
+      if (metricsResult.status === 'fulfilled') {
+        setMetrics(metricsResult.value);
+        setLastUpdated(new Date(metricsResult.value.collected_at).toLocaleString());
+        loadedAny = true;
+      } else {
+        partial = true;
+      }
+      if (infoResult.status === 'fulfilled') {
+        setSystemInfo(infoResult.value);
+        loadedAny = true;
+      } else {
+        partial = true;
+      }
+      if (alertsResult.status === 'fulfilled') {
+        setAlerts(alertsResult.value);
+        loadedAny = true;
+      } else {
+        partial = true;
+      }
+
+      setPartialData(partial);
+      if (!loadedAny) {
+        throw new Error('all fallback API requests failed');
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'unknown error while loading data';
       setError(message);
@@ -58,27 +83,34 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    streamStatusRef.current = streamStatus;
+  }, [streamStatus]);
+
+  useEffect(() => {
     loadFallbackData();
 
     streamRef.current?.close();
-    const stream = openMetricsStream(
+    const stream = subscribeMetricsStream(
       (event) => {
-        setLive(true);
+        setStreamStatus('live');
         setError(null);
+        setPartialData(false);
         setMetrics(event.snapshot);
         setAlerts(event.alerts);
         setLastUpdated(new Date(event.snapshot.collected_at).toLocaleString());
         setLoading(false);
       },
       (message) => {
-        setLive(false);
         setError(message);
+      },
+      (status) => {
+        setStreamStatus(status);
       }
     );
     streamRef.current = stream;
 
     const timer = window.setInterval(() => {
-      if (!live) {
+      if (streamStatusRef.current !== 'live') {
         void loadFallbackData();
       }
     }, FALLBACK_POLL_MS);
@@ -88,7 +120,7 @@ export default function App() {
       abortRef.current?.abort();
       stream.close();
     };
-  }, [loadFallbackData, live]);
+  }, [loadFallbackData]);
 
   useEffect(() => {
     if (!systemInfo) {
@@ -130,10 +162,13 @@ export default function App() {
     <main className="page">
       <header>
         <h1>System Monitor</h1>
-        <p className="subtitle">Live host metrics dashboard ({live ? 'SSE live' : 'fallback mode'})</p>
+        <p className="subtitle">
+          Live host metrics dashboard ({streamStatus === 'live' ? 'SSE live' : `fallback mode: ${streamStatus}`})
+        </p>
       </header>
 
       <StatusBanner loading={loading} error={error} onRetry={loadFallbackData} />
+      {partialData ? <div className="status-banner warning">Partial data mode: showing last successful values.</div> : null}
 
       {alerts?.triggered ? (
         <section className="alert-card" aria-live="assertive">

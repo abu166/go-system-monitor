@@ -96,6 +96,10 @@ h1 {
   border-left: 5px solid var(--error);
 }
 
+.status-banner.warning {
+  border-left: 5px solid var(--warning);
+}
+
 .status-banner button {
   border: 0;
   border-radius: 8px;
