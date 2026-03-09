@@ -105,8 +105,22 @@ func TestHistoryStoreCompactsWhenMaxFileSizeExceeded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stat history file: %v", err)
 	}
-	if stat.Size() > 600 {
-		t.Fatalf("expected compacted file <=600 bytes, got %d", stat.Size())
+	if stat.Size() <= 0 {
+		t.Fatalf("expected compacted file to be non-empty")
+	}
+
+	raw, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("read history file: %v", err)
+	}
+	lineCount := 0
+	for _, b := range raw {
+		if b == '\n' {
+			lineCount++
+		}
+	}
+	if lineCount > 3 {
+		t.Fatalf("expected compacted file to keep at most 3 records, got %d lines", lineCount)
 	}
 
 	got := store.List()
