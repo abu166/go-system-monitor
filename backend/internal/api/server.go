@@ -18,9 +18,14 @@ type Server struct {
 }
 
 type ServerConfig struct {
-	Port         string
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
+	Port              string
+	ReadTimeout       time.Duration
+	ReadHeaderTimeout time.Duration
+	WriteTimeout      time.Duration
+	IdleTimeout       time.Duration
+	MaxHeaderBytes    int
+	CORSAllowedOrigins []string
+	LogSampleRate      int
 }
 
 func NewServer(cfg ServerConfig, logger *slog.Logger, handler *Handler, metrics *telemetry.Metrics) *Server {
@@ -28,13 +33,26 @@ func NewServer(cfg ServerConfig, logger *slog.Logger, handler *Handler, metrics 
 	handler.RegisterRoutes(mux)
 	mux.Handle("/metrics", promhttp.Handler())
 
-	chain := RecoverMiddleware(logger, LoggingMiddleware(logger, metrics, mux))
+	sampler := NewPathSampler(cfg.LogSampleRate)
+	chain := RecoverMiddleware(
+		logger,
+		RequestIDMiddleware(
+			SecurityHeadersMiddleware(
+				CORSMiddleware(CORSConfig{AllowedOrigins: cfg.CORSAllowedOrigins},
+					LoggingMiddleware(logger, metrics, sampler, mux),
+				),
+			),
+		),
+	)
 
 	httpServer := &http.Server{
-		Addr:         fmt.Sprintf(":%s", cfg.Port),
-		Handler:      chain,
-		ReadTimeout:  cfg.ReadTimeout,
-		WriteTimeout: cfg.WriteTimeout,
+		Addr:              fmt.Sprintf(":%s", cfg.Port),
+		Handler:           chain,
+		ReadTimeout:       cfg.ReadTimeout,
+		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
+		WriteTimeout:      cfg.WriteTimeout,
+		IdleTimeout:       cfg.IdleTimeout,
+		MaxHeaderBytes:    cfg.MaxHeaderBytes,
 	}
 
 	return &Server{httpServer: httpServer, logger: logger}

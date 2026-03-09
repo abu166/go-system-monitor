@@ -13,6 +13,7 @@ type Metrics struct {
 	DiskUsage     prometheus.Gauge
 	CollectErrors *prometheus.CounterVec
 	APIRequests   *prometheus.CounterVec
+	APIRequestDuration *prometheus.HistogramVec
 }
 
 var registerOnce sync.Once
@@ -39,10 +40,15 @@ func New() *Metrics {
 			Name: "system_monitor_http_requests_total",
 			Help: "Total HTTP requests by method/path/status",
 		}, []string{"method", "path", "status"}),
+		APIRequestDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			Name:    "system_monitor_http_request_duration_seconds",
+			Help:    "HTTP request duration by method/path/status",
+			Buckets: prometheus.DefBuckets,
+		}, []string{"method", "path", "status"}),
 	}
 
 	registerOnce.Do(func() {
-		prometheus.MustRegister(m.CPUUsage, m.MemoryUsage, m.DiskUsage, m.CollectErrors, m.APIRequests)
+		prometheus.MustRegister(m.CPUUsage, m.MemoryUsage, m.DiskUsage, m.CollectErrors, m.APIRequests, m.APIRequestDuration)
 	})
 	return m
 }

@@ -24,6 +24,8 @@ func NewHandler(svc service.MetricsService, logger *slog.Logger, streamInterval 
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /health", h.health)
+	mux.HandleFunc("GET /live", h.live)
+	mux.HandleFunc("GET /ready", h.ready)
 	mux.HandleFunc("GET /api/metrics/latest", h.latestMetrics)
 	mux.HandleFunc("GET /api/metrics/history", h.metricsHistory)
 	mux.HandleFunc("GET /api/metrics/stream", h.streamMetrics)
@@ -33,6 +35,19 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 
 func (h *Handler) health(w http.ResponseWriter, r *http.Request) {
 	writeSuccess(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *Handler) live(w http.ResponseWriter, r *http.Request) {
+	writeSuccess(w, http.StatusOK, map[string]string{"status": "live"})
+}
+
+func (h *Handler) ready(w http.ResponseWriter, r *http.Request) {
+	if _, err := h.service.GetSystemInfo(r.Context()); err != nil {
+		h.logger.Error("readiness check failed", "error", err)
+		writeError(w, http.StatusServiceUnavailable, "not ready")
+		return
+	}
+	writeSuccess(w, http.StatusOK, map[string]string{"status": "ready"})
 }
 
 func (h *Handler) latestMetrics(w http.ResponseWriter, r *http.Request) {

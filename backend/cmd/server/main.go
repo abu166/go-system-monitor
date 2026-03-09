@@ -28,10 +28,29 @@ func main() {
 
 	metrics := telemetry.New()
 	collectorSvc := collector.NewSystemCollector(cfg.DiskPath)
-	historyStore, err := storage.NewHistoryStore(cfg.HistoryLimit, cfg.PersistentHistoryPath)
+	historyStore, err := storage.NewHistoryStoreWithConfig(storage.Config{
+		Limit:            cfg.HistoryLimit,
+		FilePath:         cfg.PersistentHistoryPath,
+		MaxAge:           cfg.HistoryMaxAge,
+		MaxFileSizeBytes: cfg.HistoryMaxFileSizeBytes,
+		InMemoryOnly:     cfg.HistoryInMemoryOnly,
+	})
 	if err != nil {
-		logger.Error("failed to initialize history storage", "error", err)
-		os.Exit(1)
+		if !cfg.HistoryFallbackToMemory {
+			logger.Error("failed to initialize history storage", "error", err)
+			os.Exit(1)
+		}
+
+		logger.Warn("history storage unavailable, falling back to in-memory mode", "error", err)
+		historyStore, err = storage.NewHistoryStoreWithConfig(storage.Config{
+			Limit:        cfg.HistoryLimit,
+			InMemoryOnly: true,
+			MaxAge:       cfg.HistoryMaxAge,
+		})
+		if err != nil {
+			logger.Error("failed to initialize in-memory history storage", "error", err)
+			os.Exit(1)
+		}
 	}
 
 	metricsService := service.NewMetricsService(collectorSvc, historyStore, logger, metrics, service.AlertThresholds{
@@ -41,9 +60,14 @@ func main() {
 	})
 	handler := api.NewHandler(metricsService, logger, cfg.StreamInterval)
 	server := api.NewServer(api.ServerConfig{
-		Port:         cfg.HTTPPort,
-		ReadTimeout:  cfg.ReadTimeout,
-		WriteTimeout: cfg.WriteTimeout,
+		Port:              cfg.HTTPPort,
+		ReadTimeout:       cfg.ReadTimeout,
+		ReadHeaderTimeout: cfg.ReadHeaderTimeout,
+		WriteTimeout:      cfg.WriteTimeout,
+		IdleTimeout:       cfg.IdleTimeout,
+		MaxHeaderBytes:    cfg.MaxHeaderBytes,
+		CORSAllowedOrigins: cfg.CORSAllowedOrigins,
+		LogSampleRate:      cfg.LogSampleRate,
 	}, logger, handler, metrics)
 
 	go func() {
