@@ -13,7 +13,12 @@ tests:
         alertname: SystemMonitorBackendDown
         exp_alerts:
           - exp_labels:
+              alertname: SystemMonitorBackendDown
+              job: system-monitor-backend
               severity: critical
+            exp_annotations:
+              summary: "System Monitor backend is down"
+              description: "Prometheus cannot scrape backend:8080 for at least 1 minute."
 
   - interval: 1m
     input_series:
@@ -30,7 +35,11 @@ tests:
         alertname: SystemMonitorHighCPUUsage
         exp_alerts:
           - exp_labels:
+              alertname: SystemMonitorHighCPUUsage
               severity: warning
+            exp_annotations:
+              summary: "High CPU usage"
+              description: "CPU usage is above 85% for at least 2 minutes."
 
   - interval: 1m
     input_series:
@@ -45,4 +54,8 @@ tests:
         alertname: SystemMonitorHighHTTP5xxRatio
         exp_alerts:
           - exp_labels:
+              alertname: SystemMonitorHighHTTP5xxRatio
               severity: critical
+            exp_annotations:
+              summary: "High HTTP 5xx ratio"
+              description: "More than 5% of HTTP requests are 5xx in the last 5 minutes."

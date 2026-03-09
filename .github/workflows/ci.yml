@@ -100,25 +100,13 @@ jobs:
           npm install
           npm audit --audit-level=high
       - name: Build images for image scanning
-        run: docker compose build backend frontend
+        run: |
+          docker build -t system-monitor-backend-ci:latest ./backend
+          docker build -t system-monitor-frontend-ci:latest ./frontend
       - name: Trivy scan backend image
-        run: |
-          BACKEND_IMAGE_ID=$(docker compose images -q backend)
-          docker run --rm \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy:0.57.1 image \
-            --severity HIGH,CRITICAL \
-            --exit-code 1 \
-            "$BACKEND_IMAGE_ID"
+        run: docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.57.1 image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 system-monitor-backend-ci:latest
       - name: Trivy scan frontend image
-        run: |
-          FRONTEND_IMAGE_ID=$(docker compose images -q frontend)
-          docker run --rm \
-            -v /var/run/docker.sock:/var/run/docker.sock \
-            aquasec/trivy:0.57.1 image \
-            --severity HIGH,CRITICAL \
-            --exit-code 1 \
-            "$FRONTEND_IMAGE_ID"
+        run: docker run --rm -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy:0.57.1 image --scanners vuln --severity HIGH,CRITICAL --exit-code 1 system-monitor-frontend-ci:latest
 
   integration-and-load:
     runs-on: ubuntu-latest
