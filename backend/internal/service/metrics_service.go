@@ -47,6 +47,10 @@ func NewMetricsService(c collector.Collector, history *storage.HistoryStore, log
 }
 
 func (s *metricsService) GetLatest(ctx context.Context) (model.MetricSnapshot, error) {
+	return s.collectSnapshot(ctx, true)
+}
+
+func (s *metricsService) collectSnapshot(ctx context.Context, persist bool) (model.MetricSnapshot, error) {
 	readCtx, cancel := context.WithTimeout(ctx, s.timeout)
 	defer cancel()
 
@@ -57,9 +61,11 @@ func (s *metricsService) GetLatest(ctx context.Context) (model.MetricSnapshot, e
 		return model.MetricSnapshot{}, fmt.Errorf("collect latest metrics: %w", err)
 	}
 
-	if err := s.history.Add(snapshot); err != nil {
-		s.logger.Error("failed to persist metric snapshot", "error", err)
-		return model.MetricSnapshot{}, fmt.Errorf("persist latest metrics: %w", err)
+	if persist {
+		if err := s.history.Add(snapshot); err != nil {
+			s.logger.Error("failed to persist metric snapshot", "error", err)
+			return model.MetricSnapshot{}, fmt.Errorf("persist latest metrics: %w", err)
+		}
 	}
 
 	s.telemetry.ObserveSnapshot(snapshot)
@@ -79,7 +85,11 @@ func (s *metricsService) GetLatestWithAlerts(ctx context.Context) (model.Metrics
 }
 
 func (s *metricsService) GetCurrentAlerts(ctx context.Context) (model.AlertStatus, error) {
-	snapshot, err := s.GetLatest(ctx)
+	if latest, ok := s.history.Latest(); ok {
+		return s.evaluateAlerts(latest), nil
+	}
+
+	snapshot, err := s.collectSnapshot(ctx, false)
 	if err != nil {
 		return model.AlertStatus{}, err
 	}
