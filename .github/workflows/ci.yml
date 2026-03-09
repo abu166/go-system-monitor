@@ -21,15 +21,17 @@ jobs:
       - name: Validate Prometheus alert rules
         run: |
           docker run --rm \
+            --entrypoint /bin/promtool \
             -v ${{ github.workspace }}/monitoring/prometheus:/rules \
             prom/prometheus:v2.55.1 \
-            promtool test rules /rules/alerts.test.yml
+            test rules /rules/alerts.test.yml
       - name: Validate Alertmanager config
         run: |
           docker run --rm \
+            --entrypoint /bin/amtool \
             -v ${{ github.workspace }}/monitoring/alertmanager:/cfg \
             prom/alertmanager:v0.27.0 \
-            amtool check-config /cfg/alertmanager.yml
+            check-config /cfg/alertmanager.yml
 
   frontend-build:
     runs-on: ubuntu-latest
@@ -53,7 +55,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.25.x'
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
