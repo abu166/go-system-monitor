@@ -225,3 +225,5 @@ Additional SLO/operability panels:
 - Go integration/unit tests are under `backend/internal/...`.
 - Frontend stream/backoff unit tests use `vitest`.
 - Prometheus rules tests use `promtool test rules` with `monitoring/prometheus/alerts.test.yml`.
+
+@abu166
